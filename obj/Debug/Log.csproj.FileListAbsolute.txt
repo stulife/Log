@@ -1,0 +1,5 @@
+D:\SoundApp\TP\TPCbiex\DllRef\TPLib.Log.dll
+D:\SoundApp\TP\TPCbiex\DllRef\TPLib.Log.pdb
+D:\SoundApp\TP\TPCbiex\TPLib\LogLib\obj\Debug\ResolveAssemblyReference.cache
+D:\SoundApp\TP\TPCbiex\TPLib\LogLib\obj\Debug\TPLib.Log.dll
+D:\SoundApp\TP\TPCbiex\TPLib\LogLib\obj\Debug\TPLib.Log.pdb
