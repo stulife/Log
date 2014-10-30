@@ -36,6 +36,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -49,13 +50,15 @@
     <Compile Include="Args\InfoLogArgs.cs" />
     <Compile Include="Args\OptLogArgs.cs" />
     <Compile Include="Args\ExRemindArgs.cs" />
-    <Compile Include="Data\ILogRemind.cs" />
-    <Compile Include="LogConfig.cs" />
+    <Compile Include="Config\LogConfig.cs" />
+    <Compile Include="Config\LogConfigHandler.cs" />
+    <Compile Include="Config\LogConfigItem.cs" />
+    <Compile Include="Data\ILogNotice.cs" />
     <Compile Include="Data\ILog.cs" />
     <Compile Include="Data\ILogWriteFile.cs" />
     <Compile Include="Data\ELogExLevel.cs" />
     <Compile Include="Data\ELogType.cs" />
-    <Compile Include="LogUtils.cs" />
+    <Compile Include="Log.cs" />
     <Compile Include="Libary\LogWriteToFile.cs" />
     <Compile Include="Model\DbLogData.cs" />
     <Compile Include="Model\ExLogData.cs" />

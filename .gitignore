@@ -1,4 +1,13 @@
+# User-specific files
+*.suo
+*.user
+*.sln.docstates
 
-!.gitignore
-bin/*
-Log.suo
+# Build results
+
+[Dd]ebug/
+[Rr]elease/
+x64/
+build/
+[Bb]in/
+[Oo]bj/

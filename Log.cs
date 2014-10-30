@@ -11,31 +11,37 @@ using TPLib.Log.Libary;
 using TPLib.Log.Model;
 using TPLib.Log.Monitor;
 using TPLib.Log.Utils;
+using System.Collections.Generic;
+using TPLib.Log.Config;
 
 namespace TPLib.Log
 {
-    public class LogUtils
+    public class Log
     {
-
         /// <summary>
         /// 客户端日志路径 path/App/
         /// </summary>
-        private string clientLogPath { get; set; }
+        private string _clientLogPath { get; set; }
+        /// <summary>
+        /// 日志AppName
+        /// </summary>
+        private string LogAppName;
+
+        private LogConfigItem _config;
 
         /// <summary>
-        /// 写本地文件接口（可重写）
+        /// 日志操作接口
         /// </summary>
-        private ILogWriteToFile LogWrite ;
-
+        private ILog _logOperate = null;
 
         /// <summary>
-        /// 日志TAG (ex: TpManage)
+        /// 日志提醒接口
         /// </summary>
-        public string LogTag
-        {
-            get;
-            set;
-        }
+        private ILogNotice _logRemind = null;
+        /// <summary>
+        /// 写本地文件接口
+        /// </summary>
+        private ILogWriteToFile _logWrite;
 
         /// <summary>
         /// 数据库日志事件 
@@ -57,59 +63,54 @@ namespace TPLib.Log
         /// </summary>
         public  event OptLogEvent OptLoged;
 
-        public LogConfig Config;
-      
-        /// <summary>
-        /// 日志操作接口（可重写）
-        /// </summary>
-        public ILog LogOperate = null;
 
-        /// <summary>
-        /// 日志提醒接口（可重写）
-        /// </summary>
-        public ILogRemind LogRemind = null;
+        private static SortedList<string, Log> logs = new SortedList<string, Log>();
 
-        /// <summary>
-        /// 初始化
-        /// </summary>
-        /// <param name="logTag">AppName</param>
-        /// <param name="config">LogConfig</param>
-        /// <param name="logOpt">ILog接口</param>
-        public LogUtils(string logTag, LogConfig config, ILog logOpt)
+        public static Log CreateLogInstance(string logType, ILog logOpt, ILogNotice logRemind)
         {
-            Config = config;
-            LogTag = logTag;
-            LogOperate = logOpt;
-            LogWrite = new LogWriteToFile();
-            clientLogPath = Path.Combine(Config.FilePath, logTag);
-            if (Config.IsAgainSend)
+            Log log = null;
+            logType = logType.ToLower();
+            if (!logs.ContainsKey(logType))
             {
-                MonitorRecordLog monitor = new MonitorRecordLog(LogOperate);
-                monitor.Start();
+                if (LogConfigHandler.LogConfig.LogConfigItems.ContainsKey(logType))
+                {
+                    log = new Log(logType,logOpt, logRemind);
+                    logs.Add(logType, log);
+                }
             }
+            else
+            {
+                log = logs[logType];
+            }
+            return log;
         }
 
+
         /// <summary>
         /// 初始化
         /// </summary>
-        /// <param name="logTag">AppName</param>
-        /// <param name="config">LogConfig</param>
+        /// <param name="logType">日志类型</param>
         /// <param name="logOpt">ILog日志接口</param>
         /// <param name="logRemind">ILogRemind提醒接口</param>
-        public LogUtils(string logTag,LogConfig config,ILog logOpt,ILogRemind logRemind)
+        public Log(string logType, ILog logOpt, ILogNotice logRemind)
         {
-            Config = config;
-            LogTag = logTag;
-            LogOperate = logOpt;
-            LogRemind = logRemind;
-            LogWrite = new LogWriteToFile();
-            clientLogPath = Path.Combine(Config.FilePath, logTag);
-            if (Config.IsAgainSend)
+            LogAppName = LogConfigHandler.LogConfig.AppName;
+            if (LogConfigHandler.LogConfig.LogConfigItems.ContainsKey(logType))
             {
-                MonitorRecordLog monitor = new MonitorRecordLog(LogOperate);
-                monitor.Start();
+                _config = LogConfigHandler.LogConfig.LogConfigItems[logType];
             }
+            if (!string.IsNullOrEmpty(LogConfigHandler.LogConfig.LogPath))
+            {
+                _clientLogPath = Path.Combine(LogConfigHandler.LogConfig.LogPath, logType);
+            }
+            _logOperate = logOpt;
+            _logRemind = logRemind;
+            _logWrite = new LogWriteToFile();
+            MonitorRecordLog monitor = new MonitorRecordLog(_logOperate);
+            monitor.Start();
         }
+
+
 
         /// <summary>
         /// 程序调试日志
@@ -126,9 +127,8 @@ namespace TPLib.Log
             {
                 strNamespace = method.ReflectedType.Namespace; 
             }
-            
             InfoLogData log = new InfoLogData();
-            log.App = LogTag;
+            log.App = LogAppName;
             log.Content = content;
             log.NameSpace = strNamespace;
             log.NameClass = method.ReflectedType.Name;
@@ -179,8 +179,6 @@ namespace TPLib.Log
             {
                 if (ex != null)
                 {
-                    // ExLogData log = new ExLogData(LogTag, ex, elevel);
-
                     Type type = ex.TargetSite.ReflectedType;
 
                     string strNamespace = "";
@@ -190,7 +188,7 @@ namespace TPLib.Log
                     }
 
                     ExLogData log = new ExLogData();
-                    log.App = LogTag;
+                    log.App = LogAppName;
                     log.Content = ex.ToString();
                     log.ErrNameSpace = strNamespace;
                     log.ErrModel = type.Name;
@@ -206,16 +204,16 @@ namespace TPLib.Log
 
                     if (elevel == ELogExLevel.Higher)
                     {
-                        LogRemind.MailRemind(Config.RemindMailList, log);
+                        _logRemind.MailNotice(_config.Mails, log);
                     }
 
                     if (elevel == ELogExLevel.Fatal)
                     {
-                        if (LogRemind != null)
+                        if (_logRemind != null)
                         {
                             log.AlertContent = alertInfo;
-                            LogRemind.MailRemind(Config.RemindMailList, log);
-                            LogRemind.SmsRemind(Config.RemindMailList, log);
+                            _logRemind.MailNotice(_config.Mails, log);
+                            _logRemind.SmsNotice(_config.Mobiles, log);
                         }
                     }
                 }
@@ -231,10 +229,8 @@ namespace TPLib.Log
         {
             try
             {
-              
-
                     ExLogData log = new ExLogData();
-                    log.App = LogTag;
+                    log.App = LogAppName;
                     log.Content = strErrInfo;
                     log.ErrNameSpace = strNamespace;
                     log.ErrModel = strModel;
@@ -250,16 +246,16 @@ namespace TPLib.Log
 
                     if (eLogExLevel == ELogExLevel.Higher)
                     {
-                        LogRemind.MailRemind(Config.RemindMailList, log);
+                        _logRemind.MailNotice(_config.Mails, log);
                     }
 
                     if (eLogExLevel == ELogExLevel.Fatal)
                     {
-                        if (LogRemind != null)
+                        if (_logRemind != null)
                         {
                             log.AlertContent = alertInfo;
-                            LogRemind.MailRemind(Config.RemindMailList, log);
-                            LogRemind.SmsRemind(Config.RemindMailList, log);
+                            _logRemind.MailNotice(_config.Mails, log);
+                            _logRemind.SmsNotice(_config.Mobiles, log);
                         }
                     }
                
@@ -298,7 +294,7 @@ namespace TPLib.Log
 
             if (strErrNum != "-1000")
             {
-                LogRemind.MailRemind(Config.RemindMailList, log);
+                _logRemind.MailNotice(_config.Mails, log);
             }
         }
 
@@ -399,12 +395,9 @@ namespace TPLib.Log
         {
             try
             {
-                if (Config.IsLocal)
+                if (LogConfigHandler.LogConfig.IsLocalLog)
                 {
-                    if (LogWrite != null)
-                    {
-                        LogWrite.WriteLog(clientLogPath, log);
-                    }
+                   _logWrite.WriteLog(_clientLogPath, log);
                 }
             }
             catch (Exception e)
@@ -422,19 +415,19 @@ namespace TPLib.Log
                 {
                     case "DbLogData":
                         DbLogData dblog = log as DbLogData;
-                        LogOperate.DbError(dblog);
+                        _logOperate.DbError(dblog);
                         break;
                     case "OptLogData":
                         OptLogData eventlog = log as OptLogData;
-                        LogOperate.OptLog(eventlog);
+                        _logOperate.OptLog(eventlog);
                         break;
                     case "ExLogData":
                         ExLogData exlog = log as ExLogData;
-                        LogOperate.ExError(exlog);
+                        _logOperate.ExError(exlog);
                         break;
                     case "InfoLogData":
                         InfoLogData infolog = log as InfoLogData;
-                        LogOperate.Info(infolog);
+                        _logOperate.Info(infolog);
                         break;
                 }
             }

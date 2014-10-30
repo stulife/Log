@@ -8,7 +8,6 @@ namespace TPLib.Log.Utils
 {
     public static class LogErrWrite
     {
-
         /// <summary>
         /// 写错误日志
         /// </summary>

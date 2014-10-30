@@ -12,10 +12,8 @@ namespace TPLib.Log.Model
     public class ExLogData : LogData
     {
 
-        public ExLogData()
-        {
-
-        }
+        public ExLogData() { }
+ 
 
         /// <summary>
         /// 初始化
@@ -59,7 +57,7 @@ namespace TPLib.Log.Model
         public ELogExLevel Level { get; set; }
 
         /// <summary>
-        /// 
+        /// 提醒内容
         /// </summary>
         public string AlertContent { get; set; }
 
